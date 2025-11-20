@@ -25,14 +25,14 @@ class EmailProcessorService
       customer.phone = data[:phone] if data.key?(:phone)
       customer.save!
 
-      log_success(data)
+      log_success(data, parser_class.name)
       customer
     else
-      log_error("Failed to parse customer data from email.")
+      log_error("Failed to parse customer data from email.", parser_class&.name)
       nil
     end
   rescue => e
-    log_error("An error occurred: #{e.message}")
+    log_error("An error occurred: #{e.message}", parser_class&.name)
     nil
   end
 
@@ -48,17 +48,19 @@ class EmailProcessorService
     end
   end
 
-  def log_success(data)
+  def log_success(data, parser_name = nil)
     ProcessingLog.create!(
       status: "success",
-      extracted_data_json: data
+      extracted_data_json: data,
+      parser_name: parser_name
     )
   end
 
-  def log_error(message)
+  def log_error(message, parser_name = nil)
     ProcessingLog.create!(
       status: "error",
-      error_message: message
+      error_message: message,
+      parser_name: parser_name
     )
   end
 end
