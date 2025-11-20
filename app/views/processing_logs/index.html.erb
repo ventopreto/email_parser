@@ -1,0 +1,26 @@
+<h1>Processing Logs</h1>
+
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Status</th>
+      <th>Extracted Data</th>
+      <th>Error Message</th>
+      <th>Created At</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @processing_logs.each do |log| %>
+      <tr>
+        <td>
+          <span class="badge bg-<%= log.status == "success" ? "success" : "danger" %>">
+            <%= log.status %>
+          </span>
+        </td>
+        <td><%= log.extracted_data_json %></td>
+        <td><%= log.error_message %></td>
+        <td><%= log.created_at.strftime("%B %d, %Y %H:%M") %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

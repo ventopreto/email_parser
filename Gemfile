@@ -41,3 +41,5 @@ group :development do
 end
 
 gem "sidekiq", "~> 8.0"
+
+gem "simple_form", "~> 5.4"
