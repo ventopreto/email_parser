@@ -36,6 +36,7 @@ A aplicação estará disponível em `http://localhost:3000`.
 2.  **Instale as dependências:**
     *   Ruby 3.4.4
     *   PostgreSQL
+    *   Redis
     *   Bundler
 
 3.  **Instale as gems:**
@@ -44,20 +45,22 @@ A aplicação estará disponível em `http://localhost:3000`.
     ```
 
 4.  **Configure o banco de dados:**
-    *   Certifique-se que o PostgreSQL está rodando.
+    *   Certifique-se que o PostgreSQL e o Redis estão rodando.
     *   Crie e migre o banco de dados:
         ```bash
         rails db:create db:migrate
         ```
 
-5.  **Inicie o servidor Rails:**
+5.  **Inicie os serviços:**
+    Em um terminal, inicie o servidor Rails:
     ```bash
     rails server
     ```
-
-A aplicação estará disponível em `http://localhost:3000`.
-
----
+    Em outro terminal, inicie o Sidekiq:
+    ```bash
+    bundle exec sidekiq
+    ```
+    A aplicação estará disponível em `http://localhost:3000`.
 
 # Teste Técnico – Desenvolvedor Ruby on Rails (Pleno)
 
@@ -125,7 +128,7 @@ O projeto deve ter uma interface web simples em Rails (HTML + Bootstrap), conten
 - Tratar erros de forma adequada.  
 - Utilizar **Docker e Docker Compose** para subir o projeto.  
 - Criar um **README.md** com instruções de instalação, execução e uso do sistema.  
-- Implementar **testes unitários com RSpec**.  
+- Implementar **testes unitários com RSpec**.
 
 ---
 
