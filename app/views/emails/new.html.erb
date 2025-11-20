@@ -1,0 +1,6 @@
+<h1>Upload Email</h1>
+
+<%= simple_form_for :email_upload, url: emails_path do |f| %>
+  <%= f.input :file, as: :file, label: 'Select .eml file' %>
+  <%= f.button :submit, 'Upload and Process', class: 'btn btn-primary' %>
+<% end %>
