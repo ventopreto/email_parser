@@ -13,7 +13,7 @@
     <% @processing_logs.each do |log| %>
       <tr>
         <td>
-          <span class="badge bg-<%= log.status == 'success' ? 'success' : 'danger' %>">
+          <span class="badge bg-<%= log.status == "success" ? "success" : "danger" %>">
             <%= log.status %>
           </span>
         </td>
