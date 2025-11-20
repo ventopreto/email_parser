@@ -8,7 +8,7 @@ module Parsers
       phone = extract_phone
       product_code = extract_product_code
 
-      return nil unless name && (email || phone)
+      return nil unless name
 
       {
         name: name,

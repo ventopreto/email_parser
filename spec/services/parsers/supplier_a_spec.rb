@@ -49,13 +49,18 @@ RSpec.describe Parsers::SupplierA do
       end
     end
 
-    context 'with email7.eml (missing contact info)' do
-      it 'returns nil' do
+    context 'with email7.eml' do
+      it 'extracts the customer data' do
         email_content = File.read(Rails.root.join('emails', 'email7.eml'))
         parser = described_class.new(email_content)
         result = parser.parse
 
-        expect(result).to be_nil
+        expect(result).to eq({
+          name: 'Pedro Santos',
+          email: nil,
+          phone: nil,
+          product_code: 'LMN456'
+        })
       end
     end
   end

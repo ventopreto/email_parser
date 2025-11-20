@@ -19,15 +19,29 @@ class EmailProcessorService
     parser = parser_class.new(@mail.to_s)
     data = parser.parse
 
-    if data && data[:email].present?
-      customer = Customer.find_or_initialize_by(email: data[:email])
-      customer.name = data[:name]
-      customer.phone = data[:phone] if data.key?(:phone)
-      customer.save!
+    if data # If parser successfully extracted *any* data
+      customer = nil
+      if data[:email].present?
+        customer = Customer.find_or_initialize_by(email: data[:email])
+      elsif data[:phone].present?
+        customer = Customer.find_or_initialize_by(phone: data[:phone])
+      else
+        customer = Customer.new
+      end
 
-      log_success(data, parser_class.name)
-      customer
-    else
+      if customer # Ensure customer object exists before setting attributes
+        customer.name = data[:name] if data[:name].present?
+        customer.email = data[:email] if data[:email].present?
+        customer.phone = data[:phone] if data[:phone].present?
+        customer.save! # Use save! to raise error on validation failure
+
+        log_success(data, parser_class.name)
+        customer
+      else # This case should ideally not be reached if `data` is present
+        log_error("Failed to process customer data even after parsing. No customer object could be initialized.", parser_class&.name)
+        nil
+      end
+    else # Parser returned nil (no data at all)
       log_error("Failed to parse customer data from email.", parser_class&.name)
       nil
     end
@@ -39,7 +53,7 @@ class EmailProcessorService
   private
 
   def determine_parser
-    from_address = @mail.from.first
+    from_address = @mail.from&.first
     case from_address
     when "loja@fornecedorA.com"
       Parsers::SupplierA

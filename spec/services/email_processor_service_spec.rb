@@ -26,6 +26,14 @@ RSpec.describe EmailProcessorService do
     EMAIL
   end
 
+  let(:unparsable_content_different_format) do
+    <<~TEXT
+      This is not an email.
+      It is just some plain text content.
+      It should not be parsed by any known parser.
+    TEXT
+  end
+
   describe '.process' do
     context 'with a valid email from Supplier A' do
       it 'creates a new customer and a processing log' do
@@ -87,19 +95,35 @@ RSpec.describe EmailProcessorService do
       end
     end
 
-    context 'with a malformed email' do
-      it 'creates an error processing log' do
+    context 'with unparsable content (different format)' do
+      it 'creates an error processing log indicating no parser was found' do
         customer_count_before = Customer.count
         log_count_before = ProcessingLog.count
 
-        described_class.process(malformed_email_content)
+        described_class.process(unparsable_content_different_format)
 
         expect(Customer.count).to eq(customer_count_before)
         expect(ProcessingLog.count).to eq(log_count_before + 1)
 
         log = ProcessingLog.last
         expect(log.status).to eq('error')
-        expect(log.error_message).to eq('Failed to parse customer data from email.')
+        expect(log.error_message).to eq('Parser not found for this email format.')
+      end
+    end
+
+    context 'with a malformed email (missing email but with phone)' do
+      it 'creates a new customer (identified by phone) and a success processing log' do
+        expect { described_class.process(malformed_email_content) }.to change(Customer, :count).by(1).and change(ProcessingLog, :count).by(1)
+        customer = Customer.find_by(phone: '(11) 91234-5678')
+        expect(customer.name).to eq('João da Silva')
+        expect(customer.email).to be_nil
+        expect(customer.phone).to eq('(11) 91234-5678')
+        log = ProcessingLog.last
+        expect(log.status).to eq('success')
+        expect(log.extracted_data_json['name']).to eq('João da Silva')
+        expect(log.extracted_data_json['email']).to be_nil
+        expect(log.extracted_data_json['phone']).to eq('(11) 91234-5678')
+        expect(log.extracted_data_json['product_code']).to eq('ABC123')
       end
     end
     context 'when an error occurs during customer saving' do
