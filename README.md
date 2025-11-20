@@ -1,3 +1,64 @@
+# Getting Started
+
+## Rodando com Docker (Recomendado)
+
+1.  **Configure as variáveis de ambiente:**
+    ```bash
+    cp .env_example .env
+    ```
+    *Edite o arquivo `.env` com suas credenciais se necessário.*
+
+2.  **Build a imagem Docker:**
+    ```bash
+    docker-compose build
+    ```
+
+3.  **Crie e migre o banco de dados:**
+    ```bash
+    docker-compose run web rails db:create db:migrate
+    ```
+
+4.  **Inicie os serviços:**
+    ```bash
+    docker-compose up
+    ```
+
+A aplicação estará disponível em `http://localhost:3000`.
+
+## Rodando Localmente
+
+1.  **Configure as variáveis de ambiente:**
+    ```bash
+    cp .env_example .env
+    ```
+    *Edite o arquivo `.env` com suas credenciais se necessário.*
+
+2.  **Instale as dependências:**
+    *   Ruby 3.4.4
+    *   PostgreSQL
+    *   Bundler
+
+3.  **Instale as gems:**
+    ```bash
+    bundle install
+    ```
+
+4.  **Configure o banco de dados:**
+    *   Certifique-se que o PostgreSQL está rodando.
+    *   Crie e migre o banco de dados:
+        ```bash
+        rails db:create db:migrate
+        ```
+
+5.  **Inicie o servidor Rails:**
+    ```bash
+    rails server
+    ```
+
+A aplicação estará disponível em `http://localhost:3000`.
+
+---
+
 # Teste Técnico – Desenvolvedor Ruby on Rails (Pleno)
 
 ## Objetivo
