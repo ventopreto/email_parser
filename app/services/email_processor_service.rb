@@ -19,7 +19,7 @@ class EmailProcessorService
     parser = parser_class.new(@mail.to_s)
     data = parser.parse
 
-    if data # If parser successfully extracted *any* data
+    if data
       customer = nil
       if data[:email].present?
         customer = Customer.find_or_initialize_by(email: data[:email])
@@ -29,19 +29,19 @@ class EmailProcessorService
         customer = Customer.new
       end
 
-      if customer # Ensure customer object exists before setting attributes
+      if customer
         customer.name = data[:name] if data[:name].present?
         customer.email = data[:email] if data[:email].present?
         customer.phone = data[:phone] if data[:phone].present?
-        customer.save! # Use save! to raise error on validation failure
+        customer.save!
 
         log_success(data, parser_class.name)
         customer
-      else # This case should ideally not be reached if `data` is present
+      else
         log_error("Failed to process customer data even after parsing. No customer object could be initialized.", parser_class&.name)
         nil
       end
-    else # Parser returned nil (no data at all)
+    else
       log_error("Failed to parse customer data from email.", parser_class&.name)
       nil
     end

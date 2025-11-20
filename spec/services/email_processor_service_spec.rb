@@ -171,5 +171,27 @@ RSpec.describe EmailProcessorService do
         expect { described_class.process(email1_content) rescue nil }.not_to change(Customer, :count)
       end
     end
+
+    context 'when customer object cannot be initialized (extreme edge case)' do
+      before do
+        allow(Customer).to receive(:new).and_return(nil)
+        allow(Customer).to receive(:find_or_initialize_by).and_return(nil)
+      end
+
+      it 'creates an error processing log indicating no customer object could be initialized' do
+        customer_count_before = Customer.count
+        log_count_before = ProcessingLog.count
+
+        described_class.process(email1_content)
+
+        expect(Customer.count).to eq(customer_count_before)
+        expect(ProcessingLog.count).to eq(log_count_before + 1)
+
+        log = ProcessingLog.last
+        expect(log.status).to eq('error')
+        expect(log.error_message).to eq('Failed to process customer data even after parsing. No customer object could be initialized.')
+        expect(log.parser_name).to eq('Parsers::SupplierA')
+      end
+    end
   end
 end
