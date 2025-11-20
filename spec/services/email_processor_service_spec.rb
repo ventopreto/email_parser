@@ -34,6 +34,17 @@ RSpec.describe EmailProcessorService do
     TEXT
   end
 
+  let(:supplier_a_missing_name_email_content) do
+    <<~EMAIL
+      From: loja@fornecedorA.com
+      To: vendas@suaempresa.com
+      Subject: Teste de Parser Nil
+
+      E-mail: test@example.com
+      Telefone: 123456789
+    EMAIL
+  end
+
   describe '.process' do
     context 'with a valid email from Supplier A' do
       it 'creates a new customer and a processing log' do
@@ -108,6 +119,23 @@ RSpec.describe EmailProcessorService do
         log = ProcessingLog.last
         expect(log.status).to eq('error')
         expect(log.error_message).to eq('Parser not found for this email format.')
+      end
+    end
+
+    context 'when a parser is found but returns nil data' do
+      it 'creates an error processing log indicating data could not be parsed' do
+        customer_count_before = Customer.count
+        log_count_before = ProcessingLog.count
+
+        described_class.process(supplier_a_missing_name_email_content)
+
+        expect(Customer.count).to eq(customer_count_before)
+        expect(ProcessingLog.count).to eq(log_count_before + 1)
+
+        log = ProcessingLog.last
+        expect(log.status).to eq('error')
+        expect(log.error_message).to eq('Failed to parse customer data from email.')
+        expect(log.parser_name).to eq('Parsers::SupplierA')
       end
     end
 
