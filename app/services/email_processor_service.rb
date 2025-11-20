@@ -19,7 +19,7 @@ class EmailProcessorService
     parser = parser_class.new(@mail.to_s)
     data = parser.parse
 
-    if data
+    if data && data[:email].present?
       customer = Customer.find_or_initialize_by(email: data[:email])
       customer.name = data[:name]
       customer.phone = data[:phone] if data.key?(:phone)
@@ -39,9 +39,11 @@ class EmailProcessorService
   private
 
   def determine_parser
-    if @mail.subject&.include?("Pedido de orçamento")
+    from_address = @mail.from.first
+    case from_address
+    when "loja@fornecedorA.com"
       Parsers::SupplierA
-    elsif @mail.subject&.include?("Interesse no produto")
+    when "contato@parceiroB.com"
       Parsers::PartnerB
     end
   end

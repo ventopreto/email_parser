@@ -13,9 +13,10 @@ module Parsers
     private
 
     def extract_field(content, patterns)
+      return nil if content.blank?
       patterns.each do |pattern|
         match = content.match(pattern)
-        return match[1].strip if match
+        return match[1].strip if match && match[1].present?
       end
       nil
     end
