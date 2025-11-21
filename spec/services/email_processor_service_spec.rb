@@ -26,6 +26,40 @@ RSpec.describe EmailProcessorService do
     EMAIL
   end
 
+  let(:unparsable_content_different_format) do
+    <<~TEXT
+      This is not an email.
+      It is just some plain text content.
+      It should not be parsed by any known parser.
+    TEXT
+  end
+
+  let(:supplier_a_missing_name_email_content) do
+    <<~EMAIL
+      From: loja@fornecedorA.com
+      To: vendas@suaempresa.com
+      Subject: Teste de Parser Nil
+
+      E-mail: test@example.com
+      Telefone: 123456789
+    EMAIL
+  end
+
+  let(:no_email_no_phone_email_content) do
+    <<~EMAIL
+      From: loja@fornecedorA.com
+      To: vendas@suaempresa.com
+      Subject: Consulta de Produto - ABCXYZ
+
+      Olá,
+
+      Meu nome é Fulano de Tal.
+      Gostaria de saber mais sobre o produto ABCXYZ.
+
+      Obrigado.
+    EMAIL
+  end
+
   describe '.process' do
     context 'with a valid email from Supplier A' do
       it 'creates a new customer and a processing log' do
@@ -87,12 +121,28 @@ RSpec.describe EmailProcessorService do
       end
     end
 
-    context 'with a malformed email' do
-      it 'creates an error processing log' do
+    context 'with unparsable content (different format)' do
+      it 'creates an error processing log indicating no parser was found' do
         customer_count_before = Customer.count
         log_count_before = ProcessingLog.count
 
-        described_class.process(malformed_email_content)
+        described_class.process(unparsable_content_different_format)
+
+        expect(Customer.count).to eq(customer_count_before)
+        expect(ProcessingLog.count).to eq(log_count_before + 1)
+
+        log = ProcessingLog.last
+        expect(log.status).to eq('error')
+        expect(log.error_message).to eq('Parser not found for this email format.')
+      end
+    end
+
+    context 'when a parser is found but returns nil data' do
+      it 'creates an error processing log indicating data could not be parsed' do
+        customer_count_before = Customer.count
+        log_count_before = ProcessingLog.count
+
+        described_class.process(supplier_a_missing_name_email_content)
 
         expect(Customer.count).to eq(customer_count_before)
         expect(ProcessingLog.count).to eq(log_count_before + 1)
@@ -100,6 +150,63 @@ RSpec.describe EmailProcessorService do
         log = ProcessingLog.last
         expect(log.status).to eq('error')
         expect(log.error_message).to eq('Failed to parse customer data from email.')
+        expect(log.parser_name).to eq('Parsers::SupplierA')
+      end
+    end
+
+    context "when email is from PartnerB but parsed data has no email or phone" do
+      let(:email_content) do
+        <<~EMAIL
+          From: contato@parceiroB.com
+          To: vendas@suaempresa.com
+          Subject: Pedido de informações - PROD-777
+
+          Cliente: João da Silva
+        EMAIL
+      end
+
+      it "builds a new customer and logs success" do
+        fake_data = {
+          name: "João da Silva",
+          email: nil,
+          phone: nil,
+          product_code: "PROD-777"
+        }
+
+        allow_any_instance_of(Parsers::PartnerB)
+          .to receive(:parse)
+          .and_return(fake_data)
+
+        expect {
+          described_class.process(email_content)
+        }.to change(Customer, :count).by(1)
+         .and change(ProcessingLog, :count).by(1)
+
+        customer = Customer.last
+        expect(customer.name).to eq("João da Silva")
+        expect(customer.email).to be_nil
+        expect(customer.phone).to be_nil
+
+        log = ProcessingLog.last
+        expect(log.status).to eq("success")
+        expect(log.extracted_data_json["product_code"]).to eq("PROD-777")
+        expect(log.parser_name).to eq("Parsers::PartnerB")
+      end
+    end
+
+    context 'with a malformed email (missing email but with phone)' do
+      it 'creates a new customer (identified by phone) and a success processing log' do
+        expect { described_class.process(malformed_email_content) }.to change(Customer, :count).by(1).and change(ProcessingLog, :count).by(1)
+        customer = Customer.find_by(phone: '(11) 91234-5678')
+        expect(customer.name).to eq('João da Silva')
+        expect(customer.email).to be_nil
+        expect(customer.phone).to eq('(11) 91234-5678')
+        log = ProcessingLog.last
+        expect(log.status).to eq('success')
+        expect(log.extracted_data_json['name']).to eq('João da Silva')
+        expect(log.extracted_data_json['email']).to be_nil
+        expect(log.extracted_data_json['phone']).to eq('(11) 91234-5678')
+        expect(log.extracted_data_json['product_code']).to eq('ABC123')
       end
     end
     context 'when an error occurs during customer saving' do

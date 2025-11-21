@@ -29,6 +29,10 @@ RSpec.describe Parsers::PartnerB do
 
     let(:missing_email_body) do
       <<~EMAIL
+        From: contato@parceiroB.com
+        To: vendas@suaempresa.com
+        Subject: Teste
+
         Dados de contato:
         Nome: Maria Oliveira
         Telefone: 21 99876-5432
@@ -41,10 +45,12 @@ RSpec.describe Parsers::PartnerB do
       it 'extracts the customer data' do
         parser = described_class.new(valid_body)
         result = parser.parse
+
         expect(result).to eq({
           name: 'Maria Oliveira',
           email: 'maria.oliveira@example.com',
-          phone: '21 99876-5432'
+          phone: '21 99876-5432',
+          product_code: 'XYZ987'
         })
       end
     end
@@ -57,9 +63,16 @@ RSpec.describe Parsers::PartnerB do
     end
 
     context 'when the email is missing' do
-      it 'returns nil' do
+      it 'extracts the customer data anyway (email optional)' do
         parser = described_class.new(missing_email_body)
-        expect(parser.parse).to be_nil
+        result = parser.parse
+
+        expect(result).to eq({
+          name: 'Maria Oliveira',
+          email: nil,
+          phone: '21 99876-5432',
+          product_code: nil
+        })
       end
     end
 
@@ -67,6 +80,66 @@ RSpec.describe Parsers::PartnerB do
       it 'returns nil' do
         parser = described_class.new(empty_body)
         expect(parser.parse).to be_nil
+      end
+    end
+
+    context 'with email4.eml' do
+      it 'extracts the customer data' do
+        email_content = File.read(Rails.root.join('emails', 'email4.eml'))
+        parser = described_class.new(email_content)
+        result = parser.parse
+
+        expect(result).to eq({
+          name: 'Ana Costa',
+          email: 'ana.costa@example.com',
+          phone: '+55 31 97777-1111',
+          product_code: 'PROD-555'
+        })
+      end
+    end
+
+    context 'with email5.eml' do
+      it 'extracts the customer data' do
+        email_content = File.read(Rails.root.join('emails', 'email5.eml'))
+        parser = described_class.new(email_content)
+        result = parser.parse
+
+        expect(result).to eq({
+          name: 'Ricardo Almeida',
+          email: 'ricardo.almeida@example.com',
+          phone: '41 98888-2222',
+          product_code: 'PROD-888'
+        })
+      end
+    end
+
+    context 'with email6.eml' do
+      it 'extracts data even with missing email (email optional)' do
+        email_content = File.read(Rails.root.join('emails', 'email6.eml'))
+        parser = described_class.new(email_content)
+        result = parser.parse
+
+        expect(result).to eq({
+          name: "Fernanda Lima",
+          email: nil,
+          phone: "61 93333-4444",
+          product_code: "PROD-999"
+        })
+      end
+    end
+
+    context 'with email8.eml (missing contact info)' do
+      it 'extracts data with only name and product' do
+        email_content = File.read(Rails.root.join('emails', 'email8.eml'))
+        parser = described_class.new(email_content)
+        result = parser.parse
+
+        expect(result).to eq({
+          name: "Fernanda Lima",
+          email: nil,
+          phone: nil,
+          product_code: "PROD-999"
+        })
       end
     end
   end

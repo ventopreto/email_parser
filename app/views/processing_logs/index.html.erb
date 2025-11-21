@@ -4,6 +4,7 @@
   <thead>
     <tr>
       <th>Status</th>
+      <th>Parser</th>
       <th>Extracted Data</th>
       <th>Error Message</th>
       <th>Created At</th>
@@ -17,6 +18,7 @@
             <%= log.status %>
           </span>
         </td>
+        <td><%= log.parser_name %></td>
         <td><%= log.extracted_data_json %></td>
         <td><%= log.error_message %></td>
         <td><%= log.created_at.strftime("%B %d, %Y %H:%M") %></td>
