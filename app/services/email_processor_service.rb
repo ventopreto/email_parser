@@ -11,40 +11,18 @@ class EmailProcessorService
 
   def process
     parser_class = determine_parser
-    unless parser_class
-      log_error("Parser not found for this email format.")
-      return
-    end
+    return log_error_and_nil("Parser not found for this email format.") unless parser_class
 
-    parser = parser_class.new(@mail.to_s)
-    data = parser.parse
+    data = parse_email_with(parser_class)
+    return log_error_and_nil("Failed to parse customer data from email.", parser_class.name) unless data
 
-    if data
-      customer = nil
-      if data[:email].present?
-        customer = Customer.find_or_initialize_by(email: data[:email])
-      elsif data[:phone].present?
-        customer = Customer.find_or_initialize_by(phone: data[:phone])
-      else
-        customer = Customer.new
-      end
+    customer = find_or_build_customer(data)
+    update_customer(customer, data)
 
-      if customer
-        customer.name = data[:name] if data[:name].present?
-        customer.email = data[:email] if data[:email].present?
-        customer.phone = data[:phone] if data[:phone].present?
-        customer.save!
+    customer.save!
+    log_success(data, parser_class.name)
+    customer
 
-        log_success(data, parser_class.name)
-        customer
-      else
-        log_error("Failed to process customer data even after parsing. No customer object could be initialized.", parser_class&.name)
-        nil
-      end
-    else
-      log_error("Failed to parse customer data from email.", parser_class&.name)
-      nil
-    end
   rescue => e
     log_error("An error occurred: #{e.message}", parser_class&.name)
     nil
@@ -53,13 +31,32 @@ class EmailProcessorService
   private
 
   def determine_parser
-    from_address = @mail.from&.first
-    case from_address
+    case @mail.from&.first
     when "loja@fornecedorA.com"
       Parsers::SupplierA
     when "contato@parceiroB.com"
       Parsers::PartnerB
     end
+  end
+
+  def parse_email_with(parser_class)
+    parser_class.new(@mail.to_s).parse
+  end
+
+  def find_or_build_customer(data)
+    if data[:email].present?
+      Customer.find_or_initialize_by(email: data[:email])
+    elsif data[:phone].present?
+      Customer.find_or_initialize_by(phone: data[:phone])
+    else
+      Customer.new
+    end
+  end
+
+  def update_customer(customer, data)
+    customer.name  = data[:name]  if data[:name].present?
+    customer.email = data[:email] if data[:email].present?
+    customer.phone = data[:phone] if data[:phone].present?
   end
 
   def log_success(data, parser_name = nil)
@@ -76,5 +73,10 @@ class EmailProcessorService
       error_message: message,
       parser_name: parser_name
     )
+  end
+
+  def log_error_and_nil(message, parser_name = nil)
+    log_error(message, parser_name)
+    nil
   end
 end
